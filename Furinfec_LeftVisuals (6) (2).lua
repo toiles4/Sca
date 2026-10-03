@@ -6033,3 +6033,137 @@ task.spawn(function()
         task.wait(0.2)
     end
 end)
+--==================================================
+-- AUTO DESTROY EVENT
+--==================================================
+
+local TweenService = game:GetService("TweenService")
+
+local DestroyerNoclipConnection
+local DestroyerTween
+
+Tab5Automation:AddToggle("AutoDestroyEvent", {
+    Text = "Auto desotry event",
+    Default = false,
+
+    Callback = function(Value)
+
+        -- OFF
+        if not Value then
+
+            if DestroyerTween then
+                pcall(function()
+                    DestroyerTween:Cancel()
+                end)
+                DestroyerTween = nil
+            end
+
+            if DestroyerNoclipConnection then
+                DestroyerNoclipConnection:Disconnect()
+                DestroyerNoclipConnection = nil
+            end
+
+            -- Khôi phục CanCollide
+            local Character = LocalPlayer.Character
+
+            if Character then
+                for _, Part in ipairs(Character:GetDescendants()) do
+                    if Part:IsA("BasePart") then
+                        Part.CanCollide = true
+                    end
+                end
+            end
+
+            return
+        end
+
+        -- ON
+        task.spawn(function()
+
+            while Library.Toggles.AutoDestroyEvent.Value do
+
+                local EventMobs =
+                    workspace:FindFirstChild("World Mobs")
+                    and workspace["World Mobs"]:FindFirstChild("Event Mobs")
+
+                local Destroyer =
+                    EventMobs
+                    and EventMobs:FindFirstChild("Destroyer")
+
+                if Destroyer then
+
+                    local TargetRoot =
+                        Destroyer:FindFirstChild("HumanoidRootPart")
+                        or Destroyer.PrimaryPart
+                        or Destroyer:FindFirstChildWhichIsA("BasePart")
+
+                    local Character = LocalPlayer.Character
+                    local Root =
+                        Character
+                        and Character:FindFirstChild("HumanoidRootPart")
+
+                    if TargetRoot and Root then
+
+                        --==================================================
+                        -- NOCLIP
+                        --==================================================
+
+                        if DestroyerNoclipConnection then
+                            DestroyerNoclipConnection:Disconnect()
+                        end
+
+                        DestroyerNoclipConnection =
+                            RunService.Stepped:Connect(function()
+
+                                if not Library.Toggles.AutoDestroyEvent.Value then
+                                    return
+                                end
+
+                                local Char = LocalPlayer.Character
+
+                                if Char then
+                                    for _, Part in ipairs(Char:GetDescendants()) do
+                                        if Part:IsA("BasePart") then
+                                            Part.CanCollide = false
+                                        end
+                                    end
+                                end
+                            end)
+
+                        --==================================================
+                        -- TWEEN SPEED = 300
+                        --==================================================
+
+                        local Distance =
+                            (TargetRoot.Position - Root.Position).Magnitude
+
+                        local TweenTime =
+                            math.max(Distance / 300, 0.05)
+
+                        DestroyerTween =
+                            TweenService:Create(
+                                Root,
+                                TweenInfo.new(
+                                    TweenTime,
+                                    Enum.EasingStyle.Linear
+                                ),
+                                {
+                                    CFrame =
+                                        TargetRoot.CFrame
+                                        + Vector3.new(0, 5, 0)
+                                }
+                            )
+
+                        DestroyerTween:Play()
+
+                        DestroyerTween.Completed:Wait()
+
+                        DestroyerTween = nil
+                    end
+                end
+
+                task.wait(0.1)
+            end
+        end)
+    end,
+})
